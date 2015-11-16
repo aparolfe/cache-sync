@@ -5,16 +5,38 @@
  */
 package my.javaaplication2;
 import connectivity.*;
+//import filechosingtest.*;
+//import static filechosingtest.JFilePicker.MODE_OPEN;
+//import static filechosingtest.JFilePicker.MODE_SAVE;
+
+import java.awt.FlowLayout;
+import java.io.File; 
+import javax.swing.JButton;
+import javax.swing.JFileChooser;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
 
 /**
- *
  * @author Tarana
+ * User interface for Cache Sync application
  */
 public class CacheSyncUI extends javax.swing.JFrame {
 
 private ServerThread s;
 private ClientThread c;
 
+private String textFieldLabel;
+private String buttonLabel;
+
+private JLabel label;
+private JTextField textField;
+private JButton button;
+
+private JFileChooser fileChooser;
+//int EXIT_ON_CLOSE;
+    
 public static void main(String args[]) {
         final CacheSyncUI ui = new CacheSyncUI();
         ui.s = new ServerThread(ui.statusField);
@@ -63,6 +85,11 @@ public static void main(String args[]) {
         jPanel1.setBackground(new java.awt.Color(51, 51, 51));
 
         ipField.setText("IP address");
+        ipField.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                ipFieldActionPerformed(evt);
+            }
+        });
 
         connect.setBackground(new java.awt.Color(153, 153, 153));
         connect.setText("Connect");
@@ -76,6 +103,7 @@ public static void main(String args[]) {
 
         jSeparator1.setBackground(new java.awt.Color(153, 153, 153));
 
+        uploadField.setEditable(false);
         uploadField.setText("File name");
         uploadField.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -87,6 +115,11 @@ public static void main(String args[]) {
         browse.setText("Browse");
         browse.setMaximumSize(new java.awt.Dimension(53, 23));
         browse.setMinimumSize(new java.awt.Dimension(53, 23));
+        browse.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                browseActionPerformed(evt);
+            }
+        });
 
         queryField.setText("Search Query");
         queryField.addActionListener(new java.awt.event.ActionListener() {
@@ -146,12 +179,9 @@ public static void main(String args[]) {
                     .addComponent(jSeparator1)
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(jPanel1Layout.createSequentialGroup()
-                                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                                    .addComponent(jScrollPane1, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 674, Short.MAX_VALUE)
-                                    .addComponent(ipField)
-                                    .addComponent(uploadField))
-                                .addGap(0, 0, Short.MAX_VALUE))
+                            .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 398, Short.MAX_VALUE)
+                            .addComponent(ipField)
+                            .addComponent(uploadField)
                             .addComponent(queryField)
                             .addComponent(suggestions, javax.swing.GroupLayout.Alignment.TRAILING))
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
@@ -212,7 +242,15 @@ public static void main(String args[]) {
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
-
+   // public class TestJFilePicker extends JFrame{
+        //super("Test using JFilePicker");
+      //  setLayout(new FlowLayout();
+        
+        
+        
+        
+    
+  //  }
     private void connectActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_connectActionPerformed
         String ipAddress = ipField.getText();
         statusField.append("\nTrying to connect to "+ ipAddress +"...");
@@ -238,8 +276,23 @@ public static void main(String args[]) {
     }//GEN-LAST:event_suggestionsActionPerformed
 
     private void uploadFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_uploadFieldActionPerformed
-        // TODO add your handling code here:
+       
     }//GEN-LAST:event_uploadFieldActionPerformed
+
+    private void ipFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ipFieldActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_ipFieldActionPerformed
+    
+    private void browseActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_browseActionPerformed
+       fileChooser= new JFileChooser();
+       setLayout(new FlowLayout(FlowLayout.CENTER, 5, 5));
+       fileChooser.showOpenDialog(this);
+       fileChooser.setCurrentDirectory(new File("D:/"));
+       add(fileChooser);       
+       uploadField.setText(fileChooser.getSelectedFile().getAbsolutePath());
+       setLocationRelativeTo(null);    // center on screen
+       fileChooser.setVisible(false);
+    }//GEN-LAST:event_browseActionPerformed
 
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
