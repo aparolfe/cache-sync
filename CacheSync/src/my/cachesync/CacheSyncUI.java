@@ -1,22 +1,14 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-package my.javaaplication2;
+package my.cachesync;
 import connectivity.*;
-//import filechosingtest.*;
-//import static filechosingtest.JFilePicker.MODE_OPEN;
-//import static filechosingtest.JFilePicker.MODE_SAVE;
+import datastructures.*;
 
 import java.awt.FlowLayout;
+import java.io.BufferedReader;
 import java.io.File; 
-import javax.swing.JButton;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.HashSet;
 import javax.swing.JFileChooser;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JTextField;
-import javax.swing.SwingUtilities;
 
 /**
  * @author Tarana
@@ -24,27 +16,32 @@ import javax.swing.SwingUtilities;
  */
 public class CacheSyncUI extends javax.swing.JFrame {
 
-private ServerThread s;
-private ClientThread c;
+private ServerThread server;
+private ClientThread client;
+private boolean connectionMade = false;
+private boolean dataUploaded = false;
 
-private String textFieldLabel;
-private String buttonLabel;
+public static BloomFilter myBloomFilter; // local dataset bloomfilter
+public static HashSet<String> myDataSet = new HashSet(); // local dataset queries
 
-private JLabel label;
-private JTextField textField;
-private JButton button;
+public static BloomFilter getBloomFilter() {
+    return myBloomFilter;
+}
+public static HashSet<String> getQueries() {
+    return myDataSet;
+}
 
 private JFileChooser fileChooser;
-//int EXIT_ON_CLOSE;
     
 public static void main(String args[]) {
         final CacheSyncUI ui = new CacheSyncUI();
-        ui.s = new ServerThread(ui.statusField);
-        ui.s.start();
+        ui.server = new ServerThread(ui.statusField);
+        ui.server.start();
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
                 ui.setVisible(true);
+                ui.sync.setEnabled(false);
             }
         });
         
@@ -85,11 +82,6 @@ public static void main(String args[]) {
         jPanel1.setBackground(new java.awt.Color(51, 51, 51));
 
         ipField.setText("IP address");
-        ipField.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                ipFieldActionPerformed(evt);
-            }
-        });
 
         connect.setBackground(new java.awt.Color(153, 153, 153));
         connect.setText("Connect");
@@ -103,7 +95,6 @@ public static void main(String args[]) {
 
         jSeparator1.setBackground(new java.awt.Color(153, 153, 153));
 
-        uploadField.setEditable(false);
         uploadField.setText("File name");
         uploadField.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -179,9 +170,12 @@ public static void main(String args[]) {
                     .addComponent(jSeparator1)
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 398, Short.MAX_VALUE)
-                            .addComponent(ipField)
-                            .addComponent(uploadField)
+                            .addGroup(jPanel1Layout.createSequentialGroup()
+                                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                                    .addComponent(jScrollPane1, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 674, Short.MAX_VALUE)
+                                    .addComponent(ipField)
+                                    .addComponent(uploadField))
+                                .addGap(0, 0, Short.MAX_VALUE))
                             .addComponent(queryField)
                             .addComponent(suggestions, javax.swing.GroupLayout.Alignment.TRAILING))
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
@@ -235,9 +229,7 @@ public static void main(String args[]) {
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(0, 110, Short.MAX_VALUE))
+            .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
         );
 
         pack();
@@ -245,18 +237,16 @@ public static void main(String args[]) {
    // public class TestJFilePicker extends JFrame{
         //super("Test using JFilePicker");
       //  setLayout(new FlowLayout();
-        
-        
-        
-        
-    
+         
   //  }
     private void connectActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_connectActionPerformed
         String ipAddress = ipField.getText();
         statusField.append("\nTrying to connect to "+ ipAddress +"...");
-        c = new ClientThread(ipAddress, uploadField, statusField, sync);
-        c.start();
+        client = new ClientThread(ipAddress, statusField, sync);
+        client.start();
         connect.setText("Reset");
+        connectionMade = true;
+        if (dataUploaded) this.sync.setEnabled(true);
     }//GEN-LAST:event_connectActionPerformed
 
     private void queryFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_queryFieldActionPerformed
@@ -264,7 +254,7 @@ public static void main(String args[]) {
     }//GEN-LAST:event_queryFieldActionPerformed
 
     private void syncActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_syncActionPerformed
-        // TODO add your handling code here:
+        System.out.println("Sync button pressed!");
     }//GEN-LAST:event_syncActionPerformed
 
     private void searchActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_searchActionPerformed
@@ -284,14 +274,33 @@ public static void main(String args[]) {
     }//GEN-LAST:event_ipFieldActionPerformed
     
     private void browseActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_browseActionPerformed
-       fileChooser= new JFileChooser();
-       setLayout(new FlowLayout(FlowLayout.CENTER, 5, 5));
-       fileChooser.showOpenDialog(this);
-       fileChooser.setCurrentDirectory(new File("D:/"));
-       add(fileChooser);       
-       uploadField.setText(fileChooser.getSelectedFile().getAbsolutePath());
-       setLocationRelativeTo(null);    // center on screen
-       fileChooser.setVisible(false);
+        //System.out.println("Here in browseactionperformed");
+        fileChooser= new JFileChooser();
+        setLayout(new FlowLayout(FlowLayout.CENTER, 5, 5));
+        fileChooser.showOpenDialog(this);
+        fileChooser.setCurrentDirectory(new File("D:/"));
+        add(fileChooser);                                      
+        uploadField.setText(fileChooser.getSelectedFile().getAbsolutePath());
+        setLocationRelativeTo(null);    // center on screen
+        fileChooser.setVisible(false);             
+        String line;
+        String[] parts;
+        myBloomFilter = new BloomFilter(); // add number of input strings to this line if it is not ~150000
+        try (BufferedReader data = new BufferedReader(new FileReader(uploadField.getText()))) {
+            while((line = data.readLine()) != null) {
+            parts = line.split("\t");
+            myDataSet.add(parts[0]);
+            myBloomFilter.add(parts[0]);
+            }
+        }
+        catch (IOException x) {
+            System.err.println(x);
+        }
+        System.out.println("The number of entries in the dataset is " + myDataSet.size());
+        statusField.append("\nData loaded into local app storage...");
+        dataUploaded = true;
+        if (connectionMade) this.sync.setEnabled(true);
+                       
     }//GEN-LAST:event_browseActionPerformed
 
 
