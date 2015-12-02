@@ -20,7 +20,6 @@ public class BloomFilter {
         this.m = 16 * n; // each entry alloted 16 bits to maintain low error rate
         this.k = 13;     // (int) Math.floor(m/n*Math.log(2.0))=11, but 13 worked better 
         this.b = new BitSet(m);
-        System.out.println("Bloom filter created of size in bits: " + m);
     }
     
     /** 
@@ -32,7 +31,6 @@ public class BloomFilter {
         this.m = 16 * n; // each entry alloted 16 bits to maintain low error rate
         this.k = (int) Math.floor(m/n*Math.log(2.0)); 
         this.b = new BitSet(m);
-        System.out.println("Bloom filter created of size in bits: " + m);
     }
     
     /** 
@@ -76,7 +74,7 @@ public class BloomFilter {
        
     /** 
      * Returns size of Bloom Filter
-     * @return int number of bits stored in the Bloom filter
+     * @return number of bits stored in the Bloom filter
      */
     public int size() {
         return m;
@@ -93,7 +91,7 @@ public class BloomFilter {
     /** 
      * Generates array of hash values for a given string
      * @param s string to be hashed
-     * @return int[] array of hash values
+     * @return array of hash values
      */
     private int[] hash(String s) {
         int[] values = new int[k];

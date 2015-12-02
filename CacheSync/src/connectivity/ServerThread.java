@@ -7,14 +7,14 @@ import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import datastructures.*;
-import java.util.HashSet;
+import java.util.List;
 import my.cachesync.CacheSyncUI;
 /**
  * @author Aparna
  */
 public class ServerThread extends Thread{
     private Thread t;
-    private final javax.swing.JTextArea outputField;
+    private static javax.swing.JTextArea outputField;
     
     /**
      * Starts a server listening for socket connections on port 9090
@@ -22,12 +22,10 @@ public class ServerThread extends Thread{
      */
     public ServerThread(javax.swing.JTextArea statusField) {
         outputField = statusField;
-        System.out.println("Starting Server!");
-        outputField.append("\nListening for incoming connections...");
+        log("Listening for incoming connections...");
     }        
     @Override
     public void start() {
-        System.out.println("Start Server...");
         if (t==null) {
             t = new Thread (this, "Server");
             t.start();
@@ -44,7 +42,7 @@ public class ServerThread extends Thread{
             listener = new ServerSocket(9090);
             try {
                 while (true) { 
-                new Comm(listener.accept(),outputField).start();
+                new Comm(listener.accept()).start();
                 }
             } finally {
                 listener.close();
@@ -54,15 +52,16 @@ public class ServerThread extends Thread{
             e.printStackTrace();
         }
     }
+   
+    private static void log(String message) {
+            outputField.append(message);
+        }
 
     private static class Comm extends Thread {
         private Thread t;
         private final Socket socket;
-        private final javax.swing.JTextArea outputField;
-        public Comm(Socket socket, javax.swing.JTextArea statusField) {
+        public Comm(Socket socket) {
             this.socket = socket;
-            outputField = statusField;
-            System.out.println("Starting Comm!");
             log("New connection with client at " + socket);
         }
 
@@ -80,36 +79,24 @@ public class ServerThread extends Thread{
                 out.println("Welcome to Data Cache Sync App");
                 // reads an int which is the number of bytes expected for the BF
                 int bloomFilterSize = in.readInt();
-                System.out.println("\nReceived bloom filter size: " + bloomFilterSize);
                 // reads bloomfilter bytes, makes a bloomfilter
                 byte[] bloomFilterBytes = new byte[bloomFilterSize];
                 in.readFully(bloomFilterBytes);
-                System.out.println("\nReceived bloom filter data");
+                log("\nReceived bloom filter data:" + bloomFilterSize + " bytes");
                 BloomFilter remoteBloomFilter = new BloomFilter(bloomFilterBytes);
-                System.out.println("\nReconstructed bloom filter");
                 // checks every query against the Bloom filter and saves ones not present into a String
-                String queriesToSend = "\t";
-                HashSet<String> localQueries = CacheSyncUI.getQueries();
-                System.out.println("\nStarted Query search");
+                String queriesToSend = "";
+                List<String> localQueries = CacheSyncUI.myTrie.list_all();
+                int queryCount = 0;
                 for (String query : localQueries) {
-                    if (!remoteBloomFilter.contains(query)) 
+                    if (!remoteBloomFilter.contains(query)) {
                         queriesToSend = queriesToSend.concat(query+"\t");
+                        queryCount += 1;
+                    }
                 }
-                System.out.println("\nFinished Query search");
-                System.out.println("\n Sending:" + queriesToSend + " That's all!");
                 // sends query string
                 out.println(queriesToSend);
-                System.out.println("\nSent Queries");
-                
-//                while (true) {
-//                    //BloomFilter input = (BloomFilter)in.read();
-//                   String input = in.toString();
-//                    if (input == null || input.equals(".")) {
-//                        break;
-//                    }
-//                    log("Client says " + input.toUpperCase());
-//                    
-//                }
+                log("\nData sent: "+ queryCount + " queries");
             } catch (IOException e) {
                 log("Error handling client: " + e);
             } finally {
@@ -118,15 +105,8 @@ public class ServerThread extends Thread{
                 } catch (IOException e) {
                     log("Couldn't close a socket, what's going on?");
                 }
-                log("Connection with client# closed");
+                log("Connection closed");
             }
         }
-     
-        
-    private void log(String message) {
-            outputField.append("\n"+message);
-        }
     }
-
-    
 }

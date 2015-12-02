@@ -13,7 +13,7 @@ import my.cachesync.*;
         
 /**
  *
- * @author aparna
+ * @author Aparna
  * connects to the given IP address
  * when sync button is pressed, sends the bloom filter
  * expects a string which is all the queries to add delimited by "\t"
@@ -31,37 +31,34 @@ public class ClientThread extends Thread {
     public ClientThread(String serverAddress, javax.swing.JTextArea statusField, javax.swing.JButton sync) {
         serverIP = serverAddress;
         outputField = statusField;
-        syncButton = sync;
-        System.out.println("Client initialized!");  
+        syncButton = sync; 
         
         syncButton.addActionListener(new ActionListener(){
             @Override
             public void actionPerformed(ActionEvent e) {
                 BloomFilter localBloomFilter = CacheSyncUI.getBloomFilter();
                 int bloomFilterSize = localBloomFilter.size()/8; //number of bytes
-                System.out.println("\nCalculated bloom filter size in bytes: " + bloomFilterSize);
-                outputField.append("\nSending data to " + serverIP);
+                log("\nSending data to " + serverIP + "... ");
                 byte[] bytesToSend = localBloomFilter.toByteArray(); 
                 try { 
-                    out.writeInt(bloomFilterSize);     //send number of bytes
-                    out.write(bytesToSend);         // send byte data
-                    outputField.append("\n" + bloomFilterSize + " bytes sent to " + serverIP);
-                    //read in string of queries
-                    String response = in.readLine();
-                    System.out.println("Received response: " + response);
-                    String[] queries = response.split("\t");
-                    if (queries.length!=0) {
-                        for (String query : queries) {
-                            //add query to Tarana's data structure.
-                            System.out.println("Read Query: "+query);
+                    out.writeInt(bloomFilterSize);          //send number of bytes
+                    out.write(bytesToSend);                 // send byte data
+                    log(bloomFilterSize + " bytes sent");
+                    String response = in.readLine();        //read in string of queries
+                    int responseSize = response.getBytes().length;
+                    log("Received response: " + responseSize + " bytes");
+                    if (responseSize != 0) {
+                        String[] queries = response.split("\t");
+                        if (queries.length!=0) {
+                            for (String query : queries) {  // add queries to trie
+                                CacheSyncUI.myTrie.add(query, 1);   
+                            }
                         }
-                        outputField.append("\n" + queries.length + " queries added to local dataset");
+                        log("\n" + queries.length + " queries added to local dataset");
+                        log("\nData is synced!\n");
                     }
-                    outputField.append("\n Data is synced!");
-                    //Consider closing connection here?
-//                    if (response == null || response.equals("")) {
-//                          System.exit(0);
-//                      }
+                    else
+                        log("\nData is already synced\n");
                 } catch (IOException ex) {
                     System.out.println("Client IO Exception caught! Error: " + ex);
                 }
@@ -72,16 +69,17 @@ public class ClientThread extends Thread {
     public void run() {
         try { 
             socket = new Socket(serverIP, 9090);
-            System.out.println("Client socket initialized!");
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));   
             out = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream())); 
-            System.out.println("Client waiting for response!");
             String response = in.readLine();  
-            System.out.println("Client read response!");
-            outputField.append("\n" + serverIP + " says " + response); 
+            log(serverIP + " says " + response); 
         } catch (IOException e) {
             System.out.println("Client IO Exception caught!");
         }
     }
+    
+    private void log(String message) {
+            outputField.append("\n"+message);
+        }
     
 }
